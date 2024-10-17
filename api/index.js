@@ -3,10 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Serve static files (HTML, CSS)
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Helper function to remove BOM characters
 function stripBom(str) {
@@ -24,7 +23,7 @@ app.get('/verify', (req, res) => {
 
     if (rid) {
         // Read the CSV file and look for the matching certificate ID (email)
-        fs.createReadStream('students.csv')
+        fs.createReadStream(path.join(__dirname, '../students.csv'))
             .pipe(csv())
             .on('data', (row) => {
                 // Clean the row keys by stripping BOM characters
@@ -33,7 +32,6 @@ app.get('/verify', (req, res) => {
                     cleanRow[stripBom(key.trim())] = row[key].trim();
                 });
 
-                console.log(cleanRow);  // Log the cleaned row to see the structure
                 if (cleanRow.Email === rid) {  // Check if the email matches the 'rid'
                     isValid = true;
                     result = cleanRow;  // Store the matching row
@@ -41,8 +39,6 @@ app.get('/verify', (req, res) => {
             })
             .on('end', () => {
                 if (isValid) {
-                    console.log("Matched row:", result);  // Log the matching row
-
                     const studentName = result['Student Name'] ? result['Student Name'] : 'Unknown';
                     const courseCompleted = result['Course Completed'] ? result['Course Completed'] : 'Unknown';
                     const grade = result['Grade'] ? result['Grade'] : 'Unknown';
@@ -56,11 +52,11 @@ app.get('/verify', (req, res) => {
                             <meta charset="UTF-8">
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
                             <title>Certificate Verified</title>
-                            <link rel="stylesheet" href="style.css">
+                            <link rel="stylesheet" href="/style.css">
                         </head>
                         <body>
                             <div class="container">
-                            <img class="logo" src="logo.jpg" alt="AI For ALL Logo" style="max-width: 30%; height: auto;" title="AI For ALL Logo">
+                                <img class="logo" src="/logo.jpg" alt="AI For ALL Logo" style="max-width: 30%; height: auto;" title="AI For ALL Logo">
                                 <h1>Certificate Verified</h1>
                                 <p class="message">This certificate is genuine and issued by AI For ALL.</p>
                                 <div class="details">
@@ -70,16 +66,15 @@ app.get('/verify', (req, res) => {
                                     <p><strong>Date of Completion:</strong> ${completionDate}</p>
                                 </div>
                                 <div class="footer">
-            AI For ALL © 2024. All rights reserved.
-        </div>
+                                    AI For ALL © 2024. All rights reserved.
+                                </div>
                             </div>
-                            
                         </body>
                         </html>
                     `);
                 } else {
                     // If invalid, send the invalid page
-                    res.sendFile(path.join(__dirname, 'public', 'invalid.html'));
+                    res.sendFile(path.join(__dirname, '../public', 'invalid.html'));
                 }
             });
     } else {
@@ -87,7 +82,5 @@ app.get('/verify', (req, res) => {
     }
 });
 
-// Start the server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// Export the app (do not use app.listen in Vercel)
+module.exports = app;
